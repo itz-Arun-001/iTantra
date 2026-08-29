@@ -1,0 +1,230 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-emergency: var(--emergency);
+  --color-emergency-foreground: var(--emergency-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root,
+.dark {
+  color-scheme: dark;
+
+  /* Deep navy base */
+  --background: oklch(0.22 0.06 268);
+  --foreground: oklch(0.94 0.02 265);
+
+  /* Card — lighter navy panel */
+  --card: oklch(0.28 0.07 267);
+  --card-foreground: oklch(0.95 0.02 265);
+
+  --popover: oklch(0.26 0.07 267);
+  --popover-foreground: oklch(0.95 0.02 265);
+
+  /* Action blue */
+  --primary: oklch(0.62 0.13 250);
+  --primary-foreground: oklch(0.98 0.01 250);
+
+  --secondary: oklch(0.33 0.06 266);
+  --secondary-foreground: oklch(0.94 0.02 265);
+
+  --muted: oklch(0.32 0.05 266);
+  --muted-foreground: oklch(0.74 0.05 264);
+
+  /* Ice blue accent */
+  --accent: oklch(0.88 0.06 258);
+  --accent-foreground: oklch(0.24 0.07 268);
+
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
+
+  /* Emergency — amber/red */
+  --emergency: oklch(0.66 0.2 30);
+  --emergency-foreground: oklch(0.99 0.01 60);
+
+  --success: oklch(0.72 0.15 155);
+
+  --border: oklch(0.42 0.06 264 / 45%);
+  --input: oklch(0.4 0.06 264 / 55%);
+  --ring: oklch(0.62 0.13 250);
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Idle mic glow pulse */
+@keyframes itantra-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--tw-shadow-color, oklch(0.62 0.13 250 / 45%));
+  }
+  50% {
+    box-shadow: 0 0 0 16px oklch(0.62 0.13 250 / 0%);
+  }
+}
+
+.itantra-idle-glow {
+  animation: itantra-glow 2.6s ease-out infinite;
+}
+
+.itantra-idle-glow-emergency {
+  animation: itantra-glow 1.6s ease-out infinite;
+  --tw-shadow-color: oklch(0.66 0.2 30 / 55%);
+}
+
+/* Recording concentric rings */
+@keyframes itantra-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.itantra-ring {
+  animation: itantra-ring 1.8s ease-out infinite;
+}
+
+/* Waveform bars */
+@keyframes itantra-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.itantra-bar {
+  animation: itantra-bar 0.9s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Error shake */
+@keyframes itantra-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+.itantra-shake {
+  animation: itantra-shake 0.5s ease-in-out;
+}
+
+/* Success flash */
+@keyframes itantra-flash {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.itantra-flash {
+  animation: itantra-flash 0.6s ease-out;
+}
+
+/* Card entrance */
+@keyframes itantra-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.itantra-rise {
+  animation: itantra-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Slow background signal drift */
+@keyframes itantra-pulse-arc {
+  0% {
+    opacity: 0.05;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0.05;
+    transform: scale(1.15);
+  }
+}
+
+.itantra-pulse-arc {
+  animation: itantra-pulse-arc 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itantra-idle-glow,
+  .itantra-idle-glow-emergency,
+  .itantra-ring,
+  .itantra-bar,
+  .itantra-shake,
+  .itantra-flash,
+  .itantra-rise,
+  .itantra-pulse-arc {
+    animation: none;
+  }
+}

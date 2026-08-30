@@ -40,7 +40,6 @@ def reassemble(received_packets, total_packets):
     ordered_data = b"".join(received_by_seq[seq] for seq in range(total_packets))
     return ordered_data, []
 
-
 def transmit_with_retry(data_bytes, packet_size=16, loss_probability=0.2, max_retries=5, priority="normal"):
     """
     Full reliability simulation: split into packets, simulate loss,
@@ -53,7 +52,7 @@ def transmit_with_retry(data_bytes, packet_size=16, loss_probability=0.2, max_re
 
     all_received = {}
     remaining_packets = packets
-    retries_allowed = max_retries if priority == "emergency" else 2
+    retries_allowed = max_retries if priority == "emergency" else 3
 
     for attempt in range(1, retries_allowed + 1):
         received, lost = simulate_lossy_link(remaining_packets, loss_probability)
@@ -68,7 +67,6 @@ def transmit_with_retry(data_bytes, packet_size=16, loss_probability=0.2, max_re
         if not missing_seqs:
             break
 
-        # Only retransmit the missing packets (this is the ACK/NACK-style efficiency gain)
         remaining_packets = [pkt for pkt in packets if pkt["seq"] in missing_seqs]
     else:
         print(f"  ⚠️  Max retries reached, some packets still missing.")
@@ -78,7 +76,6 @@ def transmit_with_retry(data_bytes, packet_size=16, loss_probability=0.2, max_re
     )
 
     return reassembled, still_missing
-
 
 def run_demo(text, loss_probability=0.3, priority="normal"):
     print(f"\n{'='*60}")

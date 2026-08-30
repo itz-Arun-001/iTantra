@@ -13,14 +13,20 @@ model = ParlerTTSForConditionalGeneration.from_pretrained("ai4bharat/indic-parle
 tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-parler-tts")
 description_tokenizer = AutoTokenizer.from_pretrained(model.config.text_encoder._name_or_path)
 
-VOICE_DESCRIPTION = "A clear, calm female voice speaking English at a moderate pace, with high recording quality."
+VOICE_DESCRIPTIONS = {
+    "en": "A clear, calm female voice speaking English at a moderate pace, with high recording quality.",
+    "hi": "एक स्पष्ट, शांत महिला आवाज़ मध्यम गति से हिंदी बोल रही है, उच्च गुणवत्ता वाली रिकॉर्डिंग के साथ।",
+    "ta": "ஒரு தெளிவான, அமைதியான பெண் குரல் மிதமான வேகத்தில் தமிழ் பேசுகிறது, உயர் தர பதிவுடன்.",
+    "te": "స్పష్టమైన, ప్రశాంతమైన స్త్రీ స్వరం మధ్యస్థ వేగంతో తెలుగు మాట్లాడుతోంది, అధిక నాణ్యత రికార్డింగ్‌తో.",
+}
 
 
-def speak_text(text, output_file="received_speech.wav"):
+def speak_text(text, output_file="received_speech.wav", language="en"):
     """Convert text to speech and save as a wav file."""
     print(f"\nGenerating speech for: \"{text}\"")
 
-    input_ids = description_tokenizer(VOICE_DESCRIPTION, return_tensors="pt").input_ids.to(DEVICE)
+    voice_description = VOICE_DESCRIPTIONS.get(language, VOICE_DESCRIPTIONS["en"])
+    input_ids = description_tokenizer(voice_description, return_tensors="pt").input_ids.to(DEVICE)
     prompt_input_ids = tokenizer(text, return_tensors="pt").input_ids.to(DEVICE)
 
     generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
@@ -31,7 +37,7 @@ def speak_text(text, output_file="received_speech.wav"):
     return output_file
 
 
-def run_receiver(data_bytes, was_compressed):
+def run_receiver(data_bytes, was_compressed, language="en"):
     """
     Simulates the receiver side: takes the (simulated) received packet data,
     decompresses it back to text, and speaks it via TTS.
@@ -42,14 +48,13 @@ def run_receiver(data_bytes, was_compressed):
     text = decompress_text(data_bytes, was_compressed)
     print(f"Decoded text: \"{text}\"")
 
-    speak_text(text)
+    speak_text(text, language=language)
 
 
 if __name__ == "__main__":
-    # Standalone test using a hardcoded example (simulating data "received" from sender)
     from bitrate_sim import compress_text
 
     test_text = "Medical emergency near the village. Send help immediately."
     data_bytes, was_compressed = compress_text(test_text)
 
-    run_receiver(data_bytes, was_compressed)
+    run_receiver(data_bytes, was_compressed, language="en")

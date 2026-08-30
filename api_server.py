@@ -9,7 +9,6 @@ from bitrate_sim import decompress_text, BITRATE_MODES, RAW_AUDIO_BITRATE
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# Simple in-memory store to pass data between steps (fine for a single-user local demo)
 PIPELINE_STATE = {}
 
 
@@ -17,8 +16,10 @@ PIPELINE_STATE = {}
 def step_record():
     data = request.get_json() or {}
     bitrate_mode = data.get("bitrateMode", "LOW")
+    language = data.get("language", "en")
 
-    result = run_sender(bitrate_mode=bitrate_mode)
+    PIPELINE_STATE["language"] = language
+    result = run_sender(bitrate_mode=bitrate_mode, language=language)
 
     if result is None:
         return jsonify({"success": False, "error": "No speech detected"}), 400
@@ -75,12 +76,13 @@ def step_transmit():
 def step_synthesize():
     reconstructed_bytes = PIPELINE_STATE.get("reconstructed_bytes")
     was_compressed = PIPELINE_STATE.get("was_compressed")
+    language = PIPELINE_STATE.get("language", "en")
 
     if reconstructed_bytes is None:
         return jsonify({"success": False, "error": "Nothing to synthesize"}), 400
 
     decoded_text = decompress_text(reconstructed_bytes, was_compressed)
-    speak_text(decoded_text, output_file="received_speech.wav")
+    speak_text(decoded_text, output_file="received_speech.wav", language=language)
 
     return jsonify({"success": True, "decodedText": decoded_text})
 

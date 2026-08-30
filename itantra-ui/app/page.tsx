@@ -60,7 +60,7 @@ export default function Page() {
       const recordRes = await fetch(`${API_BASE}/api/step/record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bitrateMode: bitrate }),
+      body: JSON.stringify({ bitrateMode: bitrate, language }),
       })
       stopTimer()
       const recordData = await recordRes.json()

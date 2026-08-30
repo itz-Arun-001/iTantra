@@ -5,7 +5,6 @@ import torchaudio
 import time
 from transformers import pipeline
 
-# Import our bitrate simulation functions
 from bitrate_sim import compress_text, simulate_transmission, BITRATE_MODES, RAW_AUDIO_BITRATE
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,7 +31,7 @@ asr.model.generation_config.suppress_tokens = None
 asr.model.generation_config.begin_suppress_tokens = None
 
 
-def record_and_transcribe():
+def record_and_transcribe(language="en"):
     """Record from mic, trim silence with VAD, transcribe with Whisper."""
     print("\nGet ready...")
     time.sleep(1.5)
@@ -60,13 +59,13 @@ def record_and_transcribe():
 
     result = asr(
         {"array": trimmed, "sampling_rate": 16000},
-        generate_kwargs={"language": "en", "task": "transcribe"},
+        generate_kwargs={"language": language, "task": "transcribe"},
     )
     return result["text"].strip()
 
 
-def run_sender(bitrate_mode="LOW"):
-    text = record_and_transcribe()
+def run_sender(bitrate_mode="LOW", language="en"):
+    text = record_and_transcribe(language=language)
 
     if text is None:
         print("Nothing to send.")
@@ -93,4 +92,4 @@ def run_sender(bitrate_mode="LOW"):
 
 
 if __name__ == "__main__":
-    run_sender(bitrate_mode="LOW")
+    run_sender(bitrate_mode="LOW", language="en")

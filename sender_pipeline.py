@@ -11,7 +11,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {DEVICE}")
 
 MIC_INDEX = 7  # your mic's index
-MAX_DURATION = 15
+MAX_DURATION = 20  # absolute safety cap in seconds
 
 device_info = sd.query_devices(MIC_INDEX)
 native_rate = int(device_info["default_samplerate"])
@@ -30,21 +30,23 @@ asr = pipeline(
 asr.model.generation_config.suppress_tokens = None
 asr.model.generation_config.begin_suppress_tokens = None
 
+resampler = torchaudio.transforms.Resample(orig_freq=native_rate, new_freq=16000)
 
 def record_and_transcribe(language="en"):
-    """Record from mic, trim silence with VAD, transcribe with Whisper."""
+    """Record from mic (fixed duration), trim silence with VAD, transcribe with Whisper."""
+    RECORD_DURATION = 20  # seconds
+
     print("\nGet ready...")
     time.sleep(1.5)
-    print(f"Listening... speak, then just stop (max {MAX_DURATION} sec).")
+    print(f"Listening... speak, then just stop (max {RECORD_DURATION} sec).")
 
-    audio = sd.rec(int(MAX_DURATION * native_rate), samplerate=native_rate, channels=channels, dtype="float32", device=MIC_INDEX)
+    audio = sd.rec(int(RECORD_DURATION * native_rate), samplerate=native_rate, channels=channels, dtype="float32", device=MIC_INDEX)
     sd.wait()
     print("Recording done. Detecting speech segments...")
 
     audio_tensor = torch.from_numpy(audio.T)
     if audio_tensor.shape[0] > 1:
         audio_tensor = audio_tensor.mean(dim=0, keepdim=True)
-    resampler = torchaudio.transforms.Resample(orig_freq=native_rate, new_freq=16000)
     resampled = resampler(audio_tensor).squeeze(0)
 
     speech_timestamps = get_speech_timestamps(resampled, vad_model, sampling_rate=16000)
@@ -53,8 +55,11 @@ def record_and_transcribe(language="en"):
         print("No speech detected.")
         return None
 
-    start = speech_timestamps[0]["start"]
-    end = speech_timestamps[-1]["end"]
+    # Padding avoids clipping the very start/end of speech
+    PAD_SAMPLES = 4000  # ~0.25 seconds at 16kHz
+
+    start = max(0, speech_timestamps[0]["start"] - PAD_SAMPLES)
+    end = min(len(resampled), speech_timestamps[-1]["end"] + PAD_SAMPLES)
     trimmed = resampled[start:end].numpy()
 
     result = asr(

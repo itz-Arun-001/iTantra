@@ -3,6 +3,8 @@ import numpy as np
 import torch
 import torchaudio
 import time
+import os
+import soundfile as sf
 from transformers import pipeline
 
 from bitrate_sim import compress_text, simulate_transmission, BITRATE_MODES, RAW_AUDIO_BITRATE
@@ -24,7 +26,7 @@ vad_model, utils = torch.hub.load(repo_or_dir="snakers4/silero-vad", model="sile
 print("Loading Whisper model...")
 asr = pipeline(
     "automatic-speech-recognition",
-    model="openai/whisper-small",
+   model="openai/whisper-large-v3-turbo",
     device=0 if DEVICE == "cuda" else -1,
 )
 asr.model.generation_config.suppress_tokens = None
@@ -44,6 +46,10 @@ def record_and_transcribe(language="en"):
     sd.wait()
     print("Recording done. Detecting speech segments...")
 
+    sf.write("actual_raw_recording.wav", audio, native_rate)
+    raw_file_size = os.path.getsize("actual_raw_recording.wav")
+    print(f"Actual raw audio file size: {raw_file_size} bytes")
+
     audio_tensor = torch.from_numpy(audio.T)
     if audio_tensor.shape[0] > 1:
         audio_tensor = audio_tensor.mean(dim=0, keepdim=True)
@@ -55,16 +61,22 @@ def record_and_transcribe(language="en"):
         print("No speech detected.")
         return None
 
-    # Padding avoids clipping the very start/end of speech
-    PAD_SAMPLES = 4000  # ~0.25 seconds at 16kHz
+    PAD_SAMPLES = 4000
 
     start = max(0, speech_timestamps[0]["start"] - PAD_SAMPLES)
     end = min(len(resampled), speech_timestamps[-1]["end"] + PAD_SAMPLES)
     trimmed = resampled[start:end].numpy()
+    sf.write("actual_trimmed_audio.wav", trimmed, 16000)
 
     result = asr(
         {"array": trimmed, "sampling_rate": 16000},
-        generate_kwargs={"language": language, "task": "transcribe"},
+        generate_kwargs={
+            "language": language,
+            "task": "transcribe",
+            "no_repeat_ngram_size": 3,
+            "repetition_penalty": 1.3,
+            "condition_on_prev_tokens": False,
+        },
     )
     return result["text"].strip()
 
@@ -83,13 +95,22 @@ def run_sender(bitrate_mode="LOW", language="en"):
     method = "gzip" if was_compressed else "raw"
     print(f"Transmitted size: {len(data_bytes)} bytes ({method})")
 
+    # REAL, measured comparison — not theoretical
+    if os.path.exists("actual_raw_recording.wav"):
+        raw_size = os.path.getsize("actual_raw_recording.wav")
+        real_reduction = (1 - (len(data_bytes) / raw_size)) * 100
+        print(f"\n📊 REAL MEASURED COMPARISON:")
+        print(f"   Actual raw audio file: {raw_size:,} bytes")
+        print(f"   Actual transmitted text: {len(data_bytes):,} bytes")
+        print(f"   REAL reduction: {real_reduction:.2f}% smaller (measured, not estimated)")
+
     bitrate = BITRATE_MODES[bitrate_mode]
     transmit_time = simulate_transmission(data_bytes, bitrate)
-    print(f"Bitrate mode: {bitrate_mode} ({bitrate} bps) → simulated transmission time: {transmit_time:.3f}s")
+    print(f"\nBitrate mode: {bitrate_mode} ({bitrate} bps) → simulated transmission time: {transmit_time:.3f}s")
 
     estimated_audio_seconds = max(1, len(text.split()) / 2.5)
     reduction = (1 - (bitrate / RAW_AUDIO_BITRATE)) * 100
-    print(f"Bandwidth reduction vs raw audio: {reduction:.2f}%")
+    print(f"Theoretical bandwidth reduction vs standard 64kbps voice: {reduction:.2f}%")
 
     print(f"\n✅ Ready to transmit. In the next step, this data would be sent to the receiver laptop, which converts it back to speech via TTS.")
 
